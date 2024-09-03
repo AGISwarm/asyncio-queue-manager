@@ -24,9 +24,9 @@ class AsyncIOQueueManager:
     Class to manage the queue of generation requests
 
     Args:
-        abort_response (Optional[Dict], optional): 
+        abort_response (Optional[Dict], optional):
             Response when request is aborted. Defaults to None.
-        max_concurrent_requests (int, optional): 
+        max_concurrent_requests (int, optional):
             Maximum number of concurrent requests. Defaults to 1.
     """
 

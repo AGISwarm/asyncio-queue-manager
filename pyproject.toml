@@ -23,6 +23,12 @@ test = ['pytest', 'pytest-asyncio']
 analyze = ['pyright', 'pylint', 'bandit', 'black', 'isort']
 build = ['setuptools', 'wheel', 'build']
 publish = ['twine']
+all = [
+    "agiswarm.asyncio-queue-manager[test]",
+    "agiswarm.asyncio-queue-manager[analyze]",
+    "agiswarm.asyncio-queue-manager[build]",
+    "agiswarm.asyncio-queue-manager[publish]",
+]
 
 
 [tool.setuptools.dynamic]
