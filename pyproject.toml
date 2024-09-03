@@ -8,18 +8,27 @@ dynamic = ["version"]
 description = "asyncio-queue-manager is a Python package that provides a robust and flexible solution for managing asynchronous queues in applications using asyncio. It offers an easy-to-use interface for handling task queues with advanced features such as priority scheduling, concurrency control, and error handling."
 readme = "README.md"
 
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 license = { file = "LICENSE.txt" }
 keywords = ["sample", "setuptools", "development"]
 classifiers = [
     "Programming Language :: Python :: 3",
 ]
-dependencies = ['numpy']
+dependencies = [
+    'ulid-py',
+    'sortedcontainers',
+]
 [project.optional-dependencies]
-test = ['pytest']
+test = ['pytest', 'pytest-asyncio']
 analyze = ['pyright', 'pylint', 'bandit', 'black', 'isort']
 build = ['setuptools', 'wheel', 'build']
 publish = ['twine']
+all = [
+    "agiswarm.asyncio-queue-manager[test]",
+    "agiswarm.asyncio-queue-manager[analyze]",
+    "agiswarm.asyncio-queue-manager[build]",
+    "agiswarm.asyncio-queue-manager[publish]",
+]
 
 
 [tool.setuptools.dynamic]
