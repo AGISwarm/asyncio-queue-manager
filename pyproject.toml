@@ -3,9 +3,9 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "AGISwarm.python-template"
+name = "AGISwarm.asyncio-queue-manager"
 dynamic = ["version"]
-description = "Python template project"
+description = "asyncio-queue-manager is a Python package that provides a robust and flexible solution for managing asynchronous queues in applications using asyncio. It offers an easy-to-use interface for handling task queues with advanced features such as priority scheduling, concurrency control, and error handling."
 readme = "README.md"
 
 requires-python = ">=3.11"
@@ -30,4 +30,4 @@ version = { file = "VERSION" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-python_template = ["py.typed"]
+asyncio_queue_manager = ["py.typed"]
