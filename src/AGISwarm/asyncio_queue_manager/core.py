@@ -4,19 +4,38 @@ import asyncio
 import logging
 from enum import Enum
 from functools import wraps
-from typing import Callable, Dict
+from typing import AsyncGenerator, Callable, Dict, Protocol, cast
 
 import ulid
-from sortedcontainers import SortedSet
+
+from .thread_safe_sorted_list import ThreadSafeSortedList as SortedSet
 
 
-class RequestStatus(Enum):
+class RequestStatus(str, Enum):
     """Request status"""
 
     WAITING = "waiting"
     RUNNING = "running"
     FINISHED = "finished"
-    ABORTED = "abort"
+    ABORTED = "aborted"
+    ERROR = "error"
+
+
+# pylint: disable=too-few-public-methods
+class QueuedFunction(Protocol):
+    """Queued function protocol"""
+
+    request_id: str
+
+    def __call__(self, *args, **kwargs): ...
+
+
+class QueuedGenerator(Protocol):
+    """Queued generator protocol"""
+
+    request_id: str
+
+    def __call__(self, *args, **kwargs) -> AsyncGenerator[Dict, None]: ...
 
 
 class AsyncIOQueueManager:
@@ -40,58 +59,90 @@ class AsyncIOQueueManager:
         self.max_concurrent_requests = max_concurrent_requests
         self.sleep_time = sleep_time
 
-    def abort_task(self, request_ulid: str):
+    async def abort_task(self, request_id: str) -> None:
         """Abort request"""
-        if request_ulid in self.abort_map:
-            self.abort_map[request_ulid].set()
+        if request_id in self.abort_map:
+            self.abort_map[request_id].set()
 
-    def enqueue_task(self, func: Callable):
+    def queued_coroutine(self, func: Callable):
+        """Decorator for coroutine functions to be queued"""
+
+        request_id = str(len(self.queue)) + ulid.new().str
+
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            self.queue.add(request_id)
+            self.abort_map[request_id] = asyncio.Event()
+            try:
+                while (
+                    self.queue[0] != request_id
+                    and len(self.queue) > self.max_concurrent_requests
+                ):
+                    await asyncio.sleep(self.sleep_time)
+                    if self.abort_map[request_id].is_set():
+                        return None
+                return await func(request_id=request_id, *args, **kwargs)
+            except asyncio.CancelledError as e:
+                logging.error(e)
+            finally:
+                self.queue.remove(request_id)
+                self.abort_map.pop(request_id)
+
+        coroutine: QueuedFunction = cast(QueuedFunction, wrapper)
+        coroutine.request_id = request_id
+
+        return coroutine
+
+    def queued_generator(self, func: Callable):
         """Decorator for generation requests"""
 
-        def waiting_response(request_ulid: str):
+        request_id = str(len(self.queue)) + ulid.new().str
+        self.abort_map[request_id] = asyncio.Event()
+
+        def __waiting_response():
             """Waiting response"""
-            index = self.queue.index(request_ulid)
+            index = self.queue.index(request_id)
             return {
-                "request_id": request_ulid,
+                "request_id": request_id,
                 "status": RequestStatus.WAITING,
                 "queue_pos": index,
                 "queue_len": len(self.queue),
             }
 
-        def abort_response(request_ulid: str):
+        def __abort_response():
             """Abort response"""
-            return {"request_id": request_ulid, "status": RequestStatus.ABORTED}
+            return {"request_id": request_id, "status": RequestStatus.ABORTED}
 
-        def finished_response(request_ulid: str):
+        def __finished_response():
             """Finished response"""
-            return {"request_id": request_ulid, "status": RequestStatus.FINISHED}
+            return {"request_id": request_id, "status": RequestStatus.FINISHED}
 
         @wraps(func)
         async def wrapper(*args, **kwargs):
-            request_ulid = str(len(self.queue)) + ulid.new().str
-            self.queue.add(request_ulid)
-            self.abort_map[request_ulid] = asyncio.Event()
+            self.queue.add(request_id)
             try:
                 while (
-                    self.queue[0] != request_ulid
+                    self.queue[0] != request_id
                     and len(self.queue) > self.max_concurrent_requests
                 ):
                     await asyncio.sleep(self.sleep_time)
-                    if self.abort_map[request_ulid].is_set():
-                        yield abort_response(request_ulid)
+                    if self.abort_map[request_id].is_set():
+                        yield __abort_response()
                         return
-                    yield waiting_response(request_ulid)
+                    yield __waiting_response()
                 async for response in func(*args, **kwargs):
-                    if self.abort_map[request_ulid].is_set():
-                        yield abort_response(request_ulid)
-                        return
                     yield response
-                yield finished_response(request_ulid)
+                    if self.abort_map[request_id].is_set():
+                        yield __abort_response()
+                        return
+                yield __finished_response()
             except asyncio.CancelledError as e:
                 logging.error(e)
             finally:
-                self.queue.remove(request_ulid)
-                self.abort_map[request_ulid].clear()
-                self.abort_map.pop(request_ulid)
+                self.queue.remove(request_id)
+                self.abort_map.pop(request_id)
 
-        return wrapper
+        generator: QueuedGenerator = cast(QueuedGenerator, wrapper)
+        generator.request_id = request_id
+
+        return generator
