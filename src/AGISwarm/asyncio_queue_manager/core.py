@@ -27,18 +27,15 @@ class QueuedFunction(Protocol):
 
     request_id: str
 
-    def __call__(self, *args, **kwargs):
-        ...
+    def __call__(self, *args, **kwargs): ...
 
 
 class QueuedGenerator(Protocol):
     """Queued generator protocol"""
 
     request_id: str
-    
-    def __call__(self, *args, **kwargs) -> AsyncGenerator[Dict, None]:
-        ...
 
+    def __call__(self, *args, **kwargs) -> AsyncGenerator[Dict, None]: ...
 
 
 class AsyncIOQueueManager:
@@ -114,17 +111,11 @@ class AsyncIOQueueManager:
 
         def __abort_response():
             """Abort response"""
-            return {
-                "request_id": request_id,
-                "status": RequestStatus.ABORTED
-            }
+            return {"request_id": request_id, "status": RequestStatus.ABORTED}
 
         def __finished_response():
             """Finished response"""
-            return {
-                "request_id": request_id,
-                "status": RequestStatus.FINISHED
-            }
+            return {"request_id": request_id, "status": RequestStatus.FINISHED}
 
         @wraps(func)
         async def wrapper(*args, **kwargs):
