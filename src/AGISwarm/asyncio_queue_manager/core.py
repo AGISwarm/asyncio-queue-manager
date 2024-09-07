@@ -139,6 +139,10 @@ class AsyncIOQueueManager:
                         return
             except asyncio.CancelledError as e:
                 logging.error(e)
+                yield self._abort_response(task_id)
+            except Exception as e:  # pylint: disable=broad-except
+                logging.error(e)
+                yield {"task_id": task_id, "status": TaskStatus.ERROR}
             finally:
                 self.queue.remove(task_id)
                 self.abort_map.pop(task_id)
