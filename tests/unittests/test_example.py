@@ -9,7 +9,7 @@ import asyncio
 
 import pytest
 
-from AGISwarm.asyncio_queue_manager import AsyncIOQueueManager, RequestStatus
+from AGISwarm.asyncio_queue_manager import AsyncIOQueueManager, TaskStatus
 
 
 @pytest.mark.asyncio
