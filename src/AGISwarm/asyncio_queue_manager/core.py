@@ -12,7 +12,7 @@ from .thread_safe_sorted_list import ThreadSafeSortedList as SortedSet
 
 
 class TaskStatus(str, Enum):
-    """Request status"""
+    """Task status"""
 
     STARTING = "starting"
     WAITING = "waiting"
@@ -67,13 +67,13 @@ class AsyncIOQueueManager:
         return {"task_id": task_id, "status": TaskStatus.ABORTED}
 
     async def abort_task(self, task_id: str) -> None:
-        """Abort request"""
+        """Abort task"""
         if task_id not in self.abort_map:
             self.abort_map[task_id] = asyncio.Event()
         self.abort_map[task_id].set()
 
-    def make_request_id(self):
-        """Reserve a request ID"""
+    def make_task_id(self):
+        """Reserve a task ID"""
         task_id = str(len(self.queue)) + ulid.new().str
         if task_id not in self.abort_map:
             self.abort_map[task_id] = asyncio.Event()
@@ -83,7 +83,7 @@ class AsyncIOQueueManager:
         """Decorator for coroutine functions to be queued"""
 
         if task_id is None:
-            task_id = self.make_request_id()
+            task_id = self.make_task_id()
 
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -117,7 +117,7 @@ class AsyncIOQueueManager:
         """Decorator for generation requests"""
 
         if task_id is None:
-            task_id = self.make_request_id()
+            task_id = self.make_task_id()
 
         @wraps(func)
         async def wrapper(*args, **kwargs):
