@@ -79,7 +79,9 @@ class AsyncIOQueueManager:
             self.abort_map[task_id] = asyncio.Event()
         return task_id
 
-    def queued_task(self, func: Callable, task_id: Optional[str] = None):
+    def queued_task(
+        self, func: Callable, task_id: Optional[str] = None, pass_task_id: bool = False
+    ):
         """Decorator for coroutine functions to be queued"""
 
         if task_id is None:
@@ -98,6 +100,8 @@ class AsyncIOQueueManager:
                         yield self._abort_response(task_id)
                         return
                     yield self._waiting_response(task_id)
+                if pass_task_id:
+                    kwargs["task_id"] = task_id
                 yield func(*args, **kwargs)
             except asyncio.CancelledError:
                 yield self._abort_response(task_id)
@@ -113,7 +117,9 @@ class AsyncIOQueueManager:
 
         return coroutine
 
-    def queued_generator(self, func: Callable, task_id: Optional[str] = None):
+    def queued_generator(
+        self, func: Callable, task_id: Optional[str] = None, pass_task_id: bool = False
+    ):
         """Decorator for generation requests"""
 
         if task_id is None:
@@ -132,6 +138,8 @@ class AsyncIOQueueManager:
                         yield self._abort_response(task_id)
                         return
                     yield self._waiting_response(task_id)
+                if pass_task_id:
+                    kwargs["task_id"] = task_id
                 async for response in func(*args, **kwargs):
                     yield response
                     if self.abort_map[task_id].is_set():
