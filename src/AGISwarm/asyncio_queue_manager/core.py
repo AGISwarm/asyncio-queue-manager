@@ -56,14 +56,14 @@ class AsyncIOQueueManager:
     def __init__(
         self,
         max_concurrent_tasks: int = 1,
-        sleep_time: float = .0,
+        sleep_time: float = 0.0,
     ):
         self.queue = ThreadSafeSortedList()
         self.abort_map: Dict[str, asyncio.Event] = {}
         self.max_concurrent_tasks = max_concurrent_tasks
         self.sleep_time = sleep_time
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments, too-many-positional-arguments
     def queued_task(
         self,
         func: Callable,
